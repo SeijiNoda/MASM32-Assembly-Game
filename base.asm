@@ -133,7 +133,6 @@
         X             dd 0
         Y             dd 0
         msg1          db "Mandou uma mensagem Ok",0
-        contador      dd 0
         imgY          dd 100  
         imgX          dd 100  
         monY          dd 100
@@ -328,8 +327,7 @@ WndProc proc hWin   :DWORD,
             mov eax, offset ThreadProc
             invoke CreateThread, NULL, NULL, eax,  \
                                  NULL, NORMAL_PRIORITY_CLASS, \
-                                 ADDR threadID
-            mov     contador, 0                                 
+                                 ADDR threadID                           
 
 
         .elseif wParam == 1900
@@ -537,8 +535,6 @@ ThreadProc PROC USES ecx Param:DWORD
 
   invoke WaitForSingleObject, hEventStart, 100
   .if eax == WAIT_TIMEOUT
-    inc  contador
-
     #  movimento do monstro do X
     mov edx, monX
     .if imgX > edx
@@ -556,7 +552,6 @@ ThreadProc PROC USES ecx Param:DWORD
     .endif
 
     invoke SendMessage, hWnd, WM_FINISH, NULL, NULL
-
   .endif
   jmp  ThreadProc
   ret  

@@ -538,6 +538,23 @@ ThreadProc PROC USES ecx Param:DWORD
   invoke WaitForSingleObject, hEventStart, 100
   .if eax == WAIT_TIMEOUT
     inc  contador
+
+    #  movimento do monstro do X
+    mov edx, monX
+    .if imgX > edx
+      add   monX, 5
+    .elseif imgX < edx
+      sub   monX, 5
+    .endif
+
+    ; movimento do monstro no Y
+    mov edx, monY
+    .if imgY > edx
+      add   monY, 5
+    .elseif imgY < edx
+      sub   monY, 5
+    .endif
+
     invoke SendMessage, hWnd, WM_FINISH, NULL, NULL
 
   .endif

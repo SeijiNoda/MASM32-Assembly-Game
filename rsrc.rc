@@ -1,0 +1,34 @@
+// o nome deve ser RSRC.RC pois o bat bldall.bat utiliza esse nome e fica mais facil
+// trabalhar
+
+#define ICONE 500
+#define IMG1  100
+#define IMG2  101
+#define IMG3  103
+
+// define icone e outros a serem utilizados
+ICONE ICON MOVEABLE PURE LOADONCALL DISCARDABLE "FAVICON.ICO"
+
+// INDICA O BITMAP A SER UTILIZADO
+
+IMG1 BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "heroi.bmp"
+IMG2 BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "monstro.bmp"
+IMG3 BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "fundo.bmp"
+
+
+
+// cria a estrutura do menu
+600 MENUEX MOVEABLE IMPURE LOADONCALL DISCARDABLE
+BEGIN
+    POPUP "&File", , , 0
+    BEGIN
+        MENUITEM "&Mensagem", 1001
+        MENUITEM "&Exit", 1000
+    END
+    POPUP "&Help", , , 0
+    BEGIN
+        MENUITEM "&About", 1900
+    END
+END
+
+

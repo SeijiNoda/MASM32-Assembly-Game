@@ -119,6 +119,7 @@
     img1    equ     100
     img2    equ     101
     img3    equ     103
+    img4    equ     104
 
 
     CREF_TRANSPARENT  EQU 00FFFFFFh
@@ -133,11 +134,16 @@
         X             dd 0
         Y             dd 0
         msg1          db "Mandou uma mensagem Ok",0
+
         imgY          dd 100  
         imgX          dd 100  
+        vodY          dd 100
+        vodX          dd 100
         monY          dd 100
         monX          dd 100
         hitBox        dd 0
+        contador      dd 0
+        boolVodka     dd 0
 ; #########################################################################
 
 .data?
@@ -148,6 +154,7 @@
         hBmpFundo   dd ?
         hBmpHeroi   dd ?
         hBmpMonstro dd ?
+        hBmpVodka   dd ?
 
 ; ------------------------------------------------------------------------
 ; This is the start of the code section where executable code begins. This
@@ -181,6 +188,9 @@ start:
 
     invoke LoadBitmap, hInstance, img3
     mov    hBmpFundo, eax
+
+    invoke LoadBitmap, hInstance, img4
+    mov     hBmpVodka, eax
 
     ; eax tem o ponteiro para uma string que mostra toda linha de comando.
     ;invoke wsprintf,addr buffer,chr$("%s"), eax
@@ -403,11 +413,15 @@ WndProc proc hWin   :DWORD,
 
     .elseif uMsg == WM_PAINT
             .if hitBox > 0
-              invoke wsprintf,addr buffer,"E", wParam
-              invoke MessageBox,hWin,ADDR buffer,ADDR szDisplayName,MB_OK
+              szText TheMsg1,"Vossa senhoria perdeste!"
+              invoke MessageBox,hWin,ADDR TheMsg1,ADDR szDisplayName,MB_OK
+              .if eax == IDOK
+                invoke PostQuitMessage,NULL
+                return 0
+              .endif
             .endif
 
-            invoke BeginPaint,hWin,ADDR Ps
+            invoke BeginPaint,hWin,ADDR Ps  
             ; aqui entra o desejamos desenha, escrever e outros.
             ; há uma outra maneira de fazer isso, mas veremos mais adiante.
             
@@ -427,9 +441,6 @@ WndProc proc hWin   :DWORD,
 
             invoke SelectObject, memDC, hBmpHeroi
             mov  hOld, eax  
-
-            ;invoke TransparentBlt, hDC, 190,100, 32,32, memDC, \
-                       ;     0,32,32,32, CREF_TRANSPARENT
             
             invoke TransparentBlt, hDC, imgX,imgY, 32,32, memDC, \
                                     0,0,32,32, CREF_TRANSPARENT
@@ -442,17 +453,27 @@ WndProc proc hWin   :DWORD,
             invoke SelectObject, memDC, hBmpMonstro
             mov  hOld, eax  
 
-            ;invoke BitBlt, hDC, monX, monY,32,32, memDC, 0,0, SRCCOPY
-
-            ;invoke BitBlt, hDC, 420, 100,32,32, memDC, 0,32, SRCCOPY
-
-            ;invoke BitBlt, hDC, 74, 100,32,32, memDC, 0,32, SRCCOPY
-
             invoke TransparentBlt, hDC, monX, monY, 30,32, memDC, \
                                     0,0,30,32, CREF_TRANSPARENT
 
             invoke SelectObject,hDC,hOld
             invoke DeleteDC,memDC  
+
+            ; vodka
+            .if contador >= 100
+              .if boolVodka == 0
+                invoke CreateCompatibleDC, hDC
+                mov   memDC, eax
+                invoke SelectObject, memDC, hBmpVodka
+                mov  hOld, eax  
+
+                invoke TransparentBlt, hDC, vodX, vodY, 10,32, memDC, \
+                                        0,0,10,32, CREF_TRANSPARENT
+
+                invoke SelectObject,hDC,hOld
+                invoke DeleteDC,memDC 
+              .endif
+            .endif
         
 
            
@@ -479,13 +500,14 @@ WndProc proc hWin   :DWORD,
         mov     imgX, 100
         mov     monX, 250
         mov     monY, 250
+        mov     vodX, 250
+        mov     vodY, 250
+        mov     contador, 0
         invoke  CreateEvent, NULL, FALSE, FALSE, NULL
         mov     hEventStart, eax
     
         mov eax, offset ThreadProc
-        invoke CreateThread, NULL, NULL, eax,  \
-                                 NULL, NORMAL_PRIORITY_CLASS, \
-                                 ADDR threadID     
+        invoke CreateThread, NULL, NULL, eax, NULL, NORMAL_PRIORITY_CLASS, ADDR threadID     
 
     .elseif uMsg == WM_CLOSE
  
@@ -540,6 +562,8 @@ ThreadProc PROC USES ecx Param:DWORD
   invoke WaitForSingleObject, hEventStart, 100
   .if eax == WAIT_TIMEOUT
     ;  movimento do monstro do X
+    inc contador
+
     mov edx, monX
     .if imgX > edx
       add   monX, 5
@@ -555,6 +579,11 @@ ThreadProc PROC USES ecx Param:DWORD
       sub   monY, 5
     .endif
 
+    ; colisao com vodka
+    ; boolVodka = 1
+    ; contador = 0
+
+    ; verificacao de colisao heroi-monstro
     mov edx, 0
     mov edx, monX
     add edx, 30
@@ -568,11 +597,11 @@ ThreadProc PROC USES ecx Param:DWORD
         mov edx, monY
         add edx, 30
         .if imgY <= edx
-          add edx, 100
-          mov ebx, imgY
-          add ebx, 100
-          sub edx, 60
-          .if ebx >= edx
+          add edx, 100    ; evita que edx fique < 0
+          mov ebx, imgY   ; copia o valor de imgY em ebx
+          add ebx, 100    ; concerta o segundo parametro da comparacao (add 100 em ebx tambem)
+          sub edx, 60     
+          .if ebx >= edx  ; ebx = imgY
             mov hitBox, 1
           .endif
         .endif

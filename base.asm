@@ -137,6 +137,7 @@
         imgX          dd 100  
         monY          dd 100
         monX          dd 100
+        hitBox        dd 0
 ; #########################################################################
 
 .data?
@@ -401,6 +402,10 @@ WndProc proc hWin   :DWORD,
             invoke InvalidateRect, hWnd, NULL, TRUE ;;addr rect, TRUE
 
     .elseif uMsg == WM_PAINT
+            .if hitBox > 0
+              invoke wsprintf,addr buffer,"E", wParam
+              invoke MessageBox,hWin,ADDR buffer,ADDR szDisplayName,MB_OK
+            .endif
 
             invoke BeginPaint,hWin,ADDR Ps
             ; aqui entra o desejamos desenha, escrever e outros.
@@ -437,14 +442,14 @@ WndProc proc hWin   :DWORD,
             invoke SelectObject, memDC, hBmpMonstro
             mov  hOld, eax  
 
-            invoke BitBlt, hDC, monX, monY,32,32, memDC, 0,0, SRCCOPY
+            ;invoke BitBlt, hDC, monX, monY,32,32, memDC, 0,0, SRCCOPY
 
             ;invoke BitBlt, hDC, 420, 100,32,32, memDC, 0,32, SRCCOPY
 
             ;invoke BitBlt, hDC, 74, 100,32,32, memDC, 0,32, SRCCOPY
 
-            invoke TransparentBlt, hDC, monX, monY, 32,32, memDC, \
-                                    0,0,32,32, CREF_TRANSPARENT
+            invoke TransparentBlt, hDC, monX, monY, 30,32, memDC, \
+                                    0,0,30,32, CREF_TRANSPARENT
 
             invoke SelectObject,hDC,hOld
             invoke DeleteDC,memDC  
@@ -480,8 +485,7 @@ WndProc proc hWin   :DWORD,
         mov eax, offset ThreadProc
         invoke CreateThread, NULL, NULL, eax,  \
                                  NULL, NORMAL_PRIORITY_CLASS, \
-                                 ADDR threadID
-        mov     contador, 0       
+                                 ADDR threadID     
 
     .elseif uMsg == WM_CLOSE
  
@@ -535,7 +539,7 @@ ThreadProc PROC USES ecx Param:DWORD
 
   invoke WaitForSingleObject, hEventStart, 100
   .if eax == WAIT_TIMEOUT
-    #  movimento do monstro do X
+    ;  movimento do monstro do X
     mov edx, monX
     .if imgX > edx
       add   monX, 5
@@ -549,6 +553,30 @@ ThreadProc PROC USES ecx Param:DWORD
       add   monY, 5
     .elseif imgY < edx
       sub   monY, 5
+    .endif
+
+    mov edx, 0
+    mov edx, monX
+    add edx, 30
+    .if imgX <= edx 
+      add edx, 100
+      mov ebx, imgX
+      add ebx, 100
+      sub edx, 60
+      .if ebx >= edx    ; ebx = imgX
+        mov edx, 0
+        mov edx, monY
+        add edx, 30
+        .if imgY <= edx
+          add edx, 100
+          mov ebx, imgY
+          add ebx, 100
+          sub edx, 60
+          .if ebx >= edx
+            mov hitBox, 1
+          .endif
+        .endif
+      .endif  
     .endif
 
     invoke SendMessage, hWnd, WM_FINISH, NULL, NULL

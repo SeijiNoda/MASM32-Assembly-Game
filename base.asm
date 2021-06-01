@@ -146,6 +146,7 @@
         contador      dd 0
         boolVodka     dd 0
         pontos        dd 0
+        pal           db "Perdeste! Pontos:   "  
 ; #########################################################################
 
 .data?
@@ -407,6 +408,13 @@ WndProc proc hWin   :DWORD,
                           
 ;            invoke ReleaseDC, hWin, hDC
             
+            ;invoke wsprintf,addr buffer,chr$("Pontos: %d"), pontos
+            ;invoke InvalidateRect, hWnd, NULL, FALSE
+            ;mov   rect.left, 5
+            ;mov   rect.top , 5
+            ;mov   rect.right, 50
+            ;mov   rect.bottom, 20
+            ;invoke InvalidateRect, hWnd, addr rect, TRUE
             mov   rect.left, 100
             mov   rect.top , 100
             mov   rect.right, 32
@@ -416,7 +424,7 @@ WndProc proc hWin   :DWORD,
     .elseif uMsg == WM_PAINT
             .if hitBox > 0
               szText TheMsg1,"Vossa senhoria perdeste!"
-              invoke MessageBox,hWin,ADDR TheMsg1,ADDR szDisplayName,MB_OK
+              invoke MessageBox,hWin,ADDR pal,ADDR szDisplayName,MB_OK
               mov pontos, 0
               .if eax == IDOK
                 invoke PostQuitMessage,NULL
@@ -475,7 +483,7 @@ WndProc proc hWin   :DWORD,
                 invoke CreateCompatibleDC, hDC
                 mov   memDC, eax
                 invoke SelectObject, memDC, hBmpVodka
-                mov  hOld, eax  
+                mov  hOld, eax   
 
                 invoke TransparentBlt, hDC, vodX, vodY, 10,32, memDC, \
                                         0,0,10,32, CREF_TRANSPARENT
@@ -484,8 +492,19 @@ WndProc proc hWin   :DWORD,
                 invoke DeleteDC,memDC 
               .endif
 
-           
 
+            ; exibir pontos
+            mov eax, offset pal
+            mov edx, pontos
+            add edx, 48
+            mov dword ptr[eax+18], edx  
+            ;invoke wsprintf,addr buffer,chr$("Pontos: %d"), pontos
+            ;invoke InvalidateRect, hWnd, NULL, FALSE
+            ;mov   rect.left, 5
+            ;mov   rect.top , 5
+            ;mov   rect.right, 50
+            ;mov   rect.bottom, 20
+            ;invoke InvalidateRect, hWnd, addr rect, TRUE
 
             invoke EndPaint,hWin,ADDR Ps
             return  0

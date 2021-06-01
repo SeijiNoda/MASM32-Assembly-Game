@@ -141,9 +141,11 @@
         vodX          dd 100
         monY          dd 100
         monX          dd 100
+        monInc        dd 2
         hitBox        dd 0
         contador      dd 0
         boolVodka     dd 0
+        pontos        dd 0
 ; #########################################################################
 
 .data?
@@ -415,6 +417,7 @@ WndProc proc hWin   :DWORD,
             .if hitBox > 0
               szText TheMsg1,"Vossa senhoria perdeste!"
               invoke MessageBox,hWin,ADDR TheMsg1,ADDR szDisplayName,MB_OK
+              mov pontos, 0
               .if eax == IDOK
                 invoke PostQuitMessage,NULL
                 return 0
@@ -461,7 +464,14 @@ WndProc proc hWin   :DWORD,
 
             ; vodka
             .if contador >= 100
-              .if boolVodka == 0
+              mov contador, 0
+              mov boolVodka, 0
+              mov edx, monX
+              mov vodX, edx
+              mov edx, monY
+              mov vodY, edx
+            .endif
+            .if boolVodka == 0
                 invoke CreateCompatibleDC, hDC
                 mov   memDC, eax
                 invoke SelectObject, memDC, hBmpVodka
@@ -473,8 +483,6 @@ WndProc proc hWin   :DWORD,
                 invoke SelectObject,hDC,hOld
                 invoke DeleteDC,memDC 
               .endif
-            .endif
-        
 
            
 
@@ -503,6 +511,8 @@ WndProc proc hWin   :DWORD,
         mov     vodX, 250
         mov     vodY, 250
         mov     contador, 0
+        mov     pontos, 0
+        mov     monInc, 2
         invoke  CreateEvent, NULL, FALSE, FALSE, NULL
         mov     hEventStart, eax
     
@@ -566,22 +576,54 @@ ThreadProc PROC USES ecx Param:DWORD
 
     mov edx, monX
     .if imgX > edx
-      add   monX, 5
+      mov edx, monInc
+      add   monX, edx
+      mov edx, monX
     .elseif imgX < edx
-      sub   monX, 5
+      mov edx, monInc
+      sub monX, edx
     .endif
 
     ; movimento do monstro no Y
     mov edx, monY
     .if imgY > edx
-      add   monY, 5
+      mov edx, monInc
+      add   monY, edx
     .elseif imgY < edx
-      sub   monY, 5
+      mov edx, monInc
+      sub monY, edx
     .endif
 
     ; colisao com vodka
     ; boolVodka = 1
     ; contador = 0
+    mov edx, 0
+    mov edx, vodX
+    add edx, 30
+    .if imgX <= edx 
+      add edx, 100
+      mov ebx, imgX
+      add ebx, 100
+      sub edx, 60
+      .if ebx >= edx    ; ebx = imgX
+        mov edx, 0
+        mov edx, vodY
+        add edx, 30
+        .if imgY <= edx
+          add edx, 100    ; evita que edx fique < 0
+          mov ebx, imgY   ; copia o valor de imgY em ebx
+          add ebx, 100    ; concerta o segundo parametro da comparacao (add 100 em ebx tambem)
+          sub edx, 60     
+          .if ebx >= edx  ; ebx = imgY
+            mov boolVodka, 1
+            mov vodX, 1000
+            mov vodY, 1000
+            inc pontos
+            inc monInc
+          .endif
+        .endif
+      .endif  
+    .endif
 
     ; verificacao de colisao heroi-monstro
     mov edx, 0

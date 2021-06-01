@@ -112,7 +112,7 @@
         WinMain   PROTO :DWORD,:DWORD,:DWORD,:DWORD
         WndProc   PROTO :DWORD,:DWORD,:DWORD,:DWORD
         TopXY     PROTO :DWORD,:DWORD
-        PlaySound PROTO STDCALL :DWORD,:DWORD,:DWORD
+        PlaySound PROTO STDCALL :DWORD,:DWORD,:DWORD                    ; protocolo para tocar musica
 
 ; #########################################################################
 
@@ -126,7 +126,7 @@
     ICONE   equ     500 ; define o numero associado ao icon igual ao arquivo RC
     ; define o numero da mensagem criada pelo usuario
     WM_FINISH equ WM_USER+100h  ; o numero da mensagem é a ultima + 100h
-    img1    equ     100
+    img1    equ     100         ; aqui declara-se as imagens
     img2    equ     101
     img3    equ     103
     img4    equ     104
@@ -145,20 +145,20 @@
         Y             dd 0
         msg1          db "Mandou uma mensagem Ok",0
 
-        imgY          dd 100  
+        imgY          dd 100                          ; posicoes do heroi, do monstro e da vodka
         imgX          dd 100  
         vodY          dd 100
         vodX          dd 100
         monY          dd 100
         monX          dd 100
-        monInc        dd 2
-        hitBox        dd 0
-        contador      dd 0
-        boolVodka     dd 0
-        pontos        dd 0
-        pal           db "Perdeste! Pontos:   " 
+        monInc        dd 2                            ; inc da velocidade do monstro
+        hitBox        dd 0                            ; variavel bool que diz se o monstro pegou o heroi
+        contador      dd 0                            ; contador do tempo
+        boolVodka     dd 0                            ; se o heroi encostou na vodka
+        pontos        dd 0                            ; contador de vodkas pegas
+        pal           db "Perdeste! Pontos:   "       ; mensagem final
 
-        BackgroundMusic     db "mus.mp3", 0
+        BackgroundMusic     db "mus.mp3", 0           ; variáveis para música
         open_dwCallback     dd ?
         open_wDeviceID     dd ?
         open_lpstrDeviceType  dd ?
@@ -171,11 +171,11 @@
 ; #########################################################################
 
 .data?
-        hitpoint    POINT <>
+        hitpoint    POINT <>                          
         hitpointEnd POINT <>
         threadID    DWORD ?  
         hEventStart HANDLE ?
-        hBmpFundo   dd ?
+        hBmpFundo   dd ?                              ; imagens 
         hBmpHeroi   dd ?
         hBmpMonstro dd ?
         hBmpVodka   dd ?
@@ -358,7 +358,7 @@ WndProc proc hWin   :DWORD,
 
         .if wParam == 1000
             invoke SendMessage,hWin,WM_SYSCOMMAND,SC_CLOSE,NULL
-        .elseif wParam == 1001            
+        .elseif wParam == 1001
             mov eax, offset ThreadProc
             invoke CreateThread, NULL, NULL, eax,  \
                                  NULL, NORMAL_PRIORITY_CLASS, \
@@ -376,7 +376,7 @@ WndProc proc hWin   :DWORD,
       invoke mciSendCommandA,open_wDeviceID,MCI_PLAY,MCI_FROM or MCI_NOTIFY,offset play_dwCallback
     ;====== end menu commands ======
     .elseif uMsg == WM_LBUTTONDOWN
-            mov eax,lParam
+            mov eax,lParam          
             and eax,0FFFFh
             mov hitpoint.x,eax
             mov eax,lParam
@@ -401,8 +401,8 @@ WndProc proc hWin   :DWORD,
     .elseif uMsg == WM_CHAR
             invoke wsprintf,addr buffer,chr$("LETRA =  %c"), wParam
             invoke MessageBox,hWin,ADDR buffer,ADDR szDisplayName,MB_OK
-    .elseif uMsg == WM_KEYDOWN
-            .if wParam == VK_UP
+    .elseif uMsg == WM_KEYDOWN            ; movimento das setas
+            .if wParam == VK_UP           ; move o heroi
                 .if imgY > 20
                   sub imgY, 5
                 .endif
@@ -432,9 +432,9 @@ WndProc proc hWin   :DWORD,
             invoke InvalidateRect, hWnd, NULL, TRUE ;;addr rect, TRUE
 
     .elseif uMsg == WM_PAINT
-            .if hitBox > 0
+            .if hitBox > 0          
               szText TheMsg1,"Vossa senhoria perdeste!"
-              invoke MessageBox,hWin,ADDR pal,ADDR szDisplayName,MB_OK
+              invoke MessageBox,hWin,ADDR pal,ADDR szDisplayName,MB_OK ; se o monstro pegar o heroi, esta mensagem é exibida
               mov pontos, 0
               .if eax == IDOK
                 invoke PostQuitMessage,NULL
@@ -521,6 +521,9 @@ WndProc proc hWin   :DWORD,
     ; passed to the WndProc [ hWin ] must be used here for any controls
     ; or child windows.
     ; --------------------------------------------------------------------
+    
+    ; posicoes iniciais
+    
         mov     X,40
         mov     Y,60
         mov     imgY, 250
@@ -585,6 +588,8 @@ TopXY proc wDim:DWORD, sDim:DWORD
 TopXY endp
 
 ; ########################################################################
+
+; thread para movimento do monstro apos 100 ms
 
 ThreadProc PROC USES ecx Param:DWORD
 

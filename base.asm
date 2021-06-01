@@ -27,28 +27,37 @@
       ; specific library, you use BOTH the include file and library
       ; file for that library.
       ; -------------------------------------------------------------
-
+      includelib \Masm32\lib\winmm.lib
+      include \masm32\include\windows.inc
       include \masm32\include\user32.inc
       include \masm32\include\kernel32.inc
       include \MASM32\INCLUDE\gdi32.inc
-
+      include \Masm32\include\winmm.inc 
+      includelib \masm32\lib\user32.lib
+      includelib \masm32\lib\kernel32.lib
+      includelib \MASM32\LIB\gdi32.lib
+      include \masm32\include\masm32rt.inc
+      include \masm32\include\windows.inc
+      include \masm32\include\user32.inc
+      include \masm32\include\kernel32.inc
+      include \MASM32\INCLUDE\gdi32.inc
       include \MASM32\INCLUDE\Comctl32.inc
       include \MASM32\INCLUDE\comdlg32.inc
       include \MASM32\INCLUDE\shell32.inc
       INCLUDE \Masm32\Include\msimg32.inc
       INCLUDE \Masm32\Include\oleaut32.inc
-
       includelib \masm32\lib\user32.lib
       includelib \masm32\lib\kernel32.lib
       includelib \MASM32\LIB\gdi32.lib
       includelib \MASM32\LIB\Comctl32.lib
       includelib \MASM32\LIB\comdlg32.lib
       includelib \MASM32\LIB\shell32.lib
-
-    INCLUDELIB \Masm32\Lib\msimg32.lib
-    INCLUDELIB \Masm32\Lib\oleaut32.lib
-    INCLUDELIB \Masm32\Lib\msvcrt.lib
-    INCLUDELIB \Masm32\Lib\masm32.lib
+      INCLUDELIB \Masm32\Lib\msimg32.lib
+      INCLUDELIB \Masm32\Lib\oleaut32.lib
+      INCLUDELIB \Masm32\Lib\msvcrt.lib
+      INCLUDELIB \Masm32\Lib\masm32.lib
+      INCLUDELIB \Masm32\Lib\cryptdll.lib
+      INCLUDE \MASM32\INCLUDE\cryptdll.inc
 ; #########################################################################
 
 ; ------------------------------------------------------------------------
@@ -100,9 +109,10 @@
 ; parameters are caught and displayed at assembly time.
 ; ----------------------------------------------------------------------
 
-        WinMain PROTO :DWORD,:DWORD,:DWORD,:DWORD
-        WndProc PROTO :DWORD,:DWORD,:DWORD,:DWORD
-        TopXY PROTO   :DWORD,:DWORD
+        WinMain   PROTO :DWORD,:DWORD,:DWORD,:DWORD
+        WndProc   PROTO :DWORD,:DWORD,:DWORD,:DWORD
+        TopXY     PROTO :DWORD,:DWORD
+        PlaySound PROTO STDCALL :DWORD,:DWORD,:DWORD
 
 ; #########################################################################
 
@@ -146,7 +156,18 @@
         contador      dd 0
         boolVodka     dd 0
         pontos        dd 0
-        pal           db "Perdeste! Pontos:   "  
+        pal           db "Perdeste! Pontos:   " 
+
+        BackgroundMusic     db "mus.mp3", 0
+        open_dwCallback     dd ?
+        open_wDeviceID     dd ?
+        open_lpstrDeviceType  dd ?
+        open_lpstrElementName  dd ?
+        open_lpstrAlias     dd ?
+        generic_dwCallback   dd ?
+        play_dwCallback     dd ?
+        play_dwFrom       dd ?
+        play_dwTo        dd ?
 ; #########################################################################
 
 .data?
@@ -195,10 +216,10 @@ start:
     invoke LoadBitmap, hInstance, img4
     mov     hBmpVodka, eax
 
-    ; eax tem o ponteiro para uma string que mostra toda linha de comando.
-    ;invoke wsprintf,addr buffer,chr$("%s"), eax
-    ;invoke MessageBox,NULL,ADDR buffer,ADDR szDisplayName,MB_OK
-
+    mov   open_lpstrDeviceType, 0h
+    mov   open_lpstrElementName,OFFSET BackgroundMusic
+    invoke mciSendCommandA,0,MCI_OPEN, MCI_OPEN_ELEMENT,offset open_dwCallback 
+    invoke mciSendCommandA,open_wDeviceID,MCI_PLAY,MCI_FROM or MCI_NOTIFY,offset play_dwCallback
     invoke WinMain,hInstance,NULL,CommandLine,SW_SHOWDEFAULT
     
     invoke ExitProcess,eax       ; cleanup & return to operating system
@@ -322,7 +343,7 @@ WndProc proc hWin   :DWORD,
 ; in the two parameters, wParam & lParam. The range of additional data that
 ; can be passed to an application is determined by the message.
 ; -------------------------------------------------------------------------
-
+    
     .if uMsg == WM_COMMAND
     ;----------------------------------------------------------------------
     ; The WM_COMMAND message is sent by menus, buttons and toolbar buttons.
@@ -348,7 +369,11 @@ WndProc proc hWin   :DWORD,
             szText TheMsg,"Assembler, Pure & Simple"
             invoke MessageBox,hWin,ADDR TheMsg,ADDR szDisplayName,MB_OK
         .endif
-
+    .elseif uMsg == MM_MCINOTIFY
+      mov   open_lpstrDeviceType, 0h
+      mov   open_lpstrElementName,OFFSET BackgroundMusic
+      invoke mciSendCommandA,0,MCI_OPEN, MCI_OPEN_ELEMENT,offset open_dwCallback 
+      invoke mciSendCommandA,open_wDeviceID,MCI_PLAY,MCI_FROM or MCI_NOTIFY,offset play_dwCallback
     ;====== end menu commands ======
     .elseif uMsg == WM_LBUTTONDOWN
             mov eax,lParam
@@ -366,7 +391,6 @@ WndProc proc hWin   :DWORD,
             shr eax,16
             mov hitpointEnd.y,eax
             invoke wsprintf,addr buffer,chr$("Posicao Inicial =  %d, %d Posicao Final =  %d, %d"), hitpoint.x, hitpoint.y,hitpointEnd.x,hitpointEnd.y
-         ;   invoke MessageBox,hWin,ADDR buffer,ADDR szDisplayName,MB_OK
             invoke InvalidateRect, hWnd, NULL, FALSE
             mov   rect.left, 10
             mov   rect.top , 200
@@ -378,8 +402,6 @@ WndProc proc hWin   :DWORD,
             invoke wsprintf,addr buffer,chr$("LETRA =  %c"), wParam
             invoke MessageBox,hWin,ADDR buffer,ADDR szDisplayName,MB_OK
     .elseif uMsg == WM_KEYDOWN
-            ;invoke wsprintf,addr buffer,chr$("Tecla codigo = %d"), wParam            
-            ;invoke MessageBox,hWin,ADDR buffer,ADDR szDisplayName,MB_OK
             .if wParam == VK_UP
                 .if imgY > 20
                   sub imgY, 5
@@ -403,18 +425,6 @@ WndProc proc hWin   :DWORD,
             
     .elseif uMsg == WM_FINISH
             ; aqui iremos desenhar sem chamar a função InvalideteRect
-;            invoke GetDC, hWnd
-;            mov    hDC, eax
-                          
-;            invoke ReleaseDC, hWin, hDC
-            
-            ;invoke wsprintf,addr buffer,chr$("Pontos: %d"), pontos
-            ;invoke InvalidateRect, hWnd, NULL, FALSE
-            ;mov   rect.left, 5
-            ;mov   rect.top , 5
-            ;mov   rect.right, 50
-            ;mov   rect.bottom, 20
-            ;invoke InvalidateRect, hWnd, addr rect, TRUE
             mov   rect.left, 100
             mov   rect.top , 100
             mov   rect.right, 32
@@ -498,18 +508,8 @@ WndProc proc hWin   :DWORD,
             mov edx, pontos
             add edx, 48
             mov dword ptr[eax+18], edx  
-            ;invoke wsprintf,addr buffer,chr$("Pontos: %d"), pontos
-            ;invoke InvalidateRect, hWnd, NULL, FALSE
-            ;mov   rect.left, 5
-            ;mov   rect.top , 5
-            ;mov   rect.right, 50
-            ;mov   rect.bottom, 20
-            ;invoke InvalidateRect, hWnd, addr rect, TRUE
-
             invoke EndPaint,hWin,ADDR Ps
             return  0
-
-    
             
 
     .elseif uMsg == WM_CREATE
@@ -536,7 +536,7 @@ WndProc proc hWin   :DWORD,
         mov     hEventStart, eax
     
         mov eax, offset ThreadProc
-        invoke CreateThread, NULL, NULL, eax, NULL, NORMAL_PRIORITY_CLASS, ADDR threadID     
+        invoke CreateThread, NULL, NULL, eax, NULL, NORMAL_PRIORITY_CLASS, ADDR threadID  
 
     .elseif uMsg == WM_CLOSE
  
